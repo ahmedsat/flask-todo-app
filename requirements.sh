@@ -1,0 +1,1 @@
+ pip3 install flask flask_sqlalchemy flask_login flask_wtf wtforms flask_bcrypt
