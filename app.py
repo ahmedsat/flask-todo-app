@@ -52,7 +52,7 @@ class Task(db.Model):  # Task Model
 # -------------------------------------------------------------------
 
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(user_id):  # provide user credentials
     return User.query.get(int(user_id))
 
 # -------------------------------------------------------------------
@@ -60,23 +60,22 @@ def load_user(user_id):
 # -------------------------------------------------------------------
 
 
-class RegisterForm(FlaskForm):
+class RegisterForm(FlaskForm):  # registration form
     username = StringField(validators=[
                            InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
     password = PasswordField(validators=[
                              InputRequired(), Length(min=8, max=80)], render_kw={"placeholder": "Password"})
     submit = SubmitField('Register')
 
-    def validate_username(self, username):
+    def validate_username(self, username):  # check if user is already registered
         existing_user_username = User.query.filter_by(
-            username=username.data).first()
-        if existing_user_username:
+            username=username.data).first()  # get current user from database
+        if existing_user_username:  # if user exists in database raise an error
             raise ValidationError(
                 'That username already exists. Please choose a different one.')
 
 
-class LoginForm(FlaskForm):
-
+class LoginForm(FlaskForm):  # login form
     username = StringField(validators=[
                            InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
     password = PasswordField(validators=[
@@ -85,27 +84,45 @@ class LoginForm(FlaskForm):
 
 
 # -------------------------------------------------------------------
+# ----------------------------- FORMS -------------------------------
+# -------------------------------------------------------------------
+
+class AddForm(FlaskForm):  # add new task form
+    title = StringField(validators=[
+        InputRequired(), Length(max=50)], render_kw={"placeholder": "title"})
+    description = StringField(validators=[
+        InputRequired(), Length(max=255)], render_kw={"placeholder": "description"})
+    submit = SubmitField('Add')
+
+# -------------------------------------------------------------------
 # ---------------------------- ROUTES -------------------------------
 # -------------------------------------------------------------------
 
+
 @app.route('/')  # Home Page Route
 def home():
+    # un comment next tow lines to setup database for the first time
     # db.create_all()
     # db.session.commit()
     login_status = current_user.is_authenticated
-    return render_template('home.html', login_status=login_status, title="TODO Man")
+    return render_template('home.html', login_status=login_status)
 
 
 @app.route('/login', methods=['GET', 'POST'])  # Login Page Route
 def login():
     login_status = current_user.is_authenticated
     form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
+    if form.validate_on_submit():  # if user click submit button
+        user = User.query.filter_by(
+            username=form.username.data).first()  # get user from database
+        if user:  # if user exists in database
+
+            # check if user entered a valid password
             if bcrypt.check_password_hash(user.password, form.password.data):
+                # utile function from flask_login to login user
                 login_user(user)
                 return redirect(url_for('dashboard'))
+    # if user entered login path
     return render_template('login.html', form=form, login_status=login_status)
 
 
@@ -114,26 +131,16 @@ def register():
     form = RegisterForm()
     login_status = current_user.is_authenticated
 
-    if form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(form.password.data)
-        new_user = User(username=form.username.data, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
+    if form.validate_on_submit():  # if user click submit button
+        hashed_password = bcrypt.generate_password_hash(
+            form.password.data)  # hash user password
+        new_user = User(username=form.username.data,
+                        password=hashed_password)  # generate user object
+        db.session.add(new_user)  # add user object to database
+        db.session.commit()  # save changes to database
         return redirect(url_for('login'))
-
+    # if user entered register path
     return render_template('register.html', form=form, login_status=login_status)
-
-
-@app.route('/dashboard', methods=['GET', 'POST'])  # Dashboard Page Route
-@login_required
-def dashboard():
-    user_id = current_user.id
-    login_status = current_user.is_authenticated
-    data = ""
-    # data = Password.query.filter_by(user_id=user_id).all()
-    # for d in data:
-    #     d.password = cipher.decrypt(d.password)
-    return render_template('dashboard.html', login_status=login_status, results=data)
 
 
 @app.route('/logout', methods=['GET', 'POST'])  # Logout Route
@@ -143,61 +150,66 @@ def logout():
     return redirect(url_for('login'))
 
 
-@ app.route('/add', methods=['GET', 'POST'])
+@app.route('/dashboard', methods=['GET', 'POST'])  # Dashboard Page Route
+@login_required
+def dashboard():
+    user_id = current_user.id
+    login_status = current_user.is_authenticated
+    # get user's tasks from database
+    tasks = Task.query.filter_by(user_id=user_id).all()
+    return render_template('dashboard.html', login_status=login_status, results=tasks)
+
+
+@ app.route('/add', methods=['GET', 'POST'])  # Add New Task Route
 @login_required
 def add():
     form = AddForm()
     login_status = current_user.is_authenticated
     user_id = current_user.id
-    if form.validate_on_submit():
-        websiteName = form.website.data
-        username = form.username.data
-        enc_password = cipher.encrypt(form.password.data)
-        record = Password(username=username, website=websiteName,
-                          password=enc_password, user_id=user_id)
-        db.session.add(record)
-        db.session.commit()
+    if form.validate_on_submit():  # if user click submit button
+        title = form.title.data
+        description = form.description.data
+        record = Task(title=title, description=description,
+                      user_id=user_id)  # create task object
+        db.session.add(record)  # add task object to database
+        db.session.commit()  # save changes to database
         return redirect(url_for('dashboard'))
-
+    # if user entered add  path
     return render_template('add.html', form=form, login_status=login_status)
 
 
-@app.route('/delete')
+@app.route('/delete')  # Delete Task Route
 @login_required
 def delete():
     id = request.args.get('id')
-    record = Password.query.get(id)
+    record = Task.query.get(id)  # get task from database
     if record:
         user_id = current_user.id
-        if user_id == record.user_id:
-            db.session.delete(record)
-            db.session.commit()
+        if user_id == record.user_id:  # if task owned by user
+            db.session.delete(record)  # delete task from database
+            db.session.commit()  # save changes to database
     return redirect(url_for('dashboard'))
 
 
-@ app.route('/update', methods=['GET', 'POST'])
+@ app.route('/update', methods=['GET', 'POST'])  # Update Task Route
 @login_required
 def update():
     form = AddForm()
     id = request.args.get('id')
-    record = Password.query.get(id)
+    record = Task.query.get(id)  # get task from database
     login_status = current_user.is_authenticated
     user_id = current_user.id
 
-    if form.validate_on_submit():
-        websiteName = form.website.data
-        username = form.username.data
-        enc_password = cipher.encrypt(form.password.data)
-        record.website = websiteName
-        record.username = username
-        record.password = enc_password
-        db.session.commit()
+    if form.validate_on_submit():  # if user click submit button
+        title = form.title.data
+        description = form.description.data
+        record.title = title
+        record.description = description
+        db.session.commit()  # save changes to database
         return redirect(url_for('dashboard'))
-
+    # if user entered Update  path
     if record:
-        user_id = current_user.id
-        if user_id == record.user_id:
-            record.password = cipher.decrypt(record.password)
+        if user_id == record.user_id:  # if task owned by user
             return render_template('update.html',
                                    form=form, login_status=login_status, formData=record)
     return redirect(url_for('dashboard'))

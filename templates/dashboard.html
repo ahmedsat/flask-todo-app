@@ -4,7 +4,7 @@
 {% block content %}
 <div class="card">
   <div class="card-header d-flex justify-content-between">
-    <p>Passwords List</p>
+    <p>Tasks List</p>
     <div class="d-flex">
       <a href="{{url_for('add')}}">
         <svg xmlns="http://www.w3.org/2000/svg"
@@ -27,34 +27,17 @@
       <thead>
         <tr>
 
-          <th scope="col">website name</th>
-          <th scope="col">username</th>
+          <th scope="col">title</th>
+          <th scope="col">description</th>
           <th scope="col">Tools</th>
         </tr>
       </thead>
       <tbody>
         {% for result in results %}
         <tr>
-          <td>{{result.website}}</td>
-          <td>{{result.username}}</td>
+          <td>{{result.title}}</td>
+          <td>{{result.description}}</td>
           <td>
-            <button type="button"
-                    class="btn btn-info"
-                    onclick="copyToClipboard('{{result.password}}')"
-                    data-bs-toggle="tooltip"
-                    data-bs-title="Copy the Password">
-              <svg xmlns="http://www.w3.org/2000/svg"
-                   width="16"
-                   height="16"
-                   fill="currentColor"
-                   class="bi bi-files"
-                   viewBox="0 0 16 16">
-                <path
-                      d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zM3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z" />
-              </svg>
-            </button>
-
-
             <a href="{{url_for('delete',id=result.id)}}"
                type="button"
                class="btn btn-danger"

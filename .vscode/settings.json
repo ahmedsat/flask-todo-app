@@ -2,5 +2,6 @@
   "cSpell.words": [
     "sqlalchemy",
     "wtforms"
-  ]
+  ],
+  "python.analysis.typeCheckingMode": "off"
 }
